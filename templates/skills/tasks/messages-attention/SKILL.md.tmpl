@@ -1,0 +1,114 @@
+---
+name: messages-attention
+description: Check the local Messages database and Contacts database in read-only mode, review new message activity since the latest successful messages check, persist concrete message-derived actions or decisions into operations state, refresh the human-readable backlog when state changes, and notify {{USER_NAME}} only when something clearly needs attention.
+---
+
+# Messages Attention
+
+## Core Instruction
+Treat Messages monitoring as a read-only relationship and loop filter: review new thread activity since the latest successful messages run, persist concrete actions or decisions into operations state, refresh the backlog when those state files change, and stay silent unless {{USER_NAME}} needs attention.
+
+This skill also owns ad hoc retrieval and summarization of specific Messages attachments, including iMessage voice notes, when {{USER_NAME}} identifies them by sender, date/time window, rough description, or downstream action like "save it in temp."
+
+## Required Inputs
+- `~/Library/Messages/chat.db`
+- `~/Library/Application Support/AddressBook/AddressBook-v22.abcddb`
+- [[vault/Operations/LOG.md]]
+- [[vault/Operations/ACTION_LEDGER.md]]
+- [[vault/Operations/DECISION_QUEUE.md]]
+- [[vault/Backlog.md]]
+- [[vault/Notes and Journal.md]]
+- [[vault/Operations/POTENTIAL_TASK_DECISIONS.md]]
+- `scripts/read_messages.swift`
+- `scripts/find_message_attachments.swift`
+- `sqlite3`, `strings`, and optionally `ffmpeg` / local `whisper` for voice notes
+
+## Default Workflow
+1. Read `LOG.md`, `ACTION_LEDGER.md`, `DECISION_QUEUE.md`, `Backlog.md`, `Notes and Journal.md`, and `POTENTIAL_TASK_DECISIONS.md`.
+2. Find the latest completed entry among `messages-attention` and `messages-baseline`.
+3. Query the local Messages database for new message activity newer than that lower bound.
+   - Prefer `swift scripts/read_messages.swift --since "<local timestamp>"`.
+4. Ignore:
+   - marketing SMS
+   - OTP codes
+   - attachment-only chatter unless surrounding context makes it important
+5. Resolve sender identity using Contacts when possible; otherwise use the raw handle.
+6. Inspect touched threads, not just isolated incoming lines.
+   - Include {{USER_NAME}}'s own sent messages when they are part of a productive back-and-forth.
+   - If text is missing or low-fidelity, stay conservative.
+7. Identify signal:
+   - attention-worthy: direct question, request, logistics, scheduling, follow-up waiting on {{USER_NAME}}, or concrete next action
+   - capture-worthy: productive conversation that produced a specific candidate action, waiting state, open loop, or decision
+8. Persist durable signal:
+   - concrete actions, waiting states, and open loops go to `ACTION_LEDGER`
+   - accept/reject/clarification questions go to `DECISION_QUEUE`
+   - do not re-add dismissed candidate ideas from `POTENTIAL_TASK_DECISIONS.md` without materially new evidence
+   - do not use `Notes and Journal` as the canonical database
+9. If `ACTION_LEDGER` or `DECISION_QUEUE` changed, refresh `[[vault/Backlog.md]]` as the readable projection of unresolved work. Do not update `Notes and Journal` just to show backlog changes.
+10. Notify only when {{USER_NAME}} needs attention now or soon.
+11. If nothing requires attention, do not post.
+
+## Attachment Retrieval Workflow
+Use this path when {{USER_NAME}} asks for a specific image, receipt, PDF, or other file from Messages rather than inbox-style triage.
+
+1. Build the narrowest plausible search window from the request.
+2. Query attachments first.
+   - Prefer `swift scripts/find_message_attachments.swift --on-date YYYY-MM-DD ...`.
+   - Start with `--incoming-only` unless {{USER_NAME}} said he sent the file.
+3. If multiple candidates remain, inspect the minimum needed to identify the right file.
+4. Copy the original file, not a rendered preview, to the requested destination.
+   - If no destination is given and the request says temp, use `$TMPDIR/<short-purpose>/`.
+5. Return the saved path and exact local timestamp of the source message.
+
+## Voice Note Transcription Workflow
+Use this path when {{USER_NAME}} asks to summarize, transcribe, or inspect a voice note from Messages.
+
+1. Build the narrowest plausible search window from the request.
+   - For "just sent" or "newest", anchor to the current local machine time and search recent incoming audio first.
+   - Prefer sender + recent timestamp over broad conversation history.
+2. Query `~/Library/Messages/chat.db` read-only for candidate audio messages.
+   - Look for `message.is_audio_message = 1`, attachment MIME types beginning with `audio/`, audio UTIs, or filenames such as `.caf`, `.m4a`, `.mp3`, `.wav`, or `.aac`.
+   - Join `message`, `handle`, `chat_message_join`, `message_attachment_join`, and `attachment` so the candidate includes sender, local timestamp, chat, attachment path, MIME/UTI, transfer name, and byte size.
+   - If helper scripts are unavailable, direct `sqlite3` queries are acceptable.
+3. Confirm the target using nearby thread context.
+   - Inspect a few messages before and after the audio message.
+   - A nearby instruction such as "summarize this" or "ask {{COS_NAME}}" is strong confirmation.
+4. Check for Apple embedded transcription before running external or local ASR.
+   - Many iMessage audio messages store `IMAudioTranscription` inside `message.attributedBody`.
+   - Export the blob with `sqlite3 ... writefile(...)`, then inspect it with `strings -a -n 8`.
+   - Use the embedded transcript when present, but note that it may contain punctuation or recognition errors.
+5. Fall back to local transcription only if no embedded transcript exists or it is clearly unusable.
+   - Use the original attachment file, not a rendered preview.
+   - Keep transcription local when possible, for example with `whisper` and `ffmpeg`.
+   - Stop stale or duplicate local transcription jobs once a reliable embedded transcript has been found.
+6. Summarize the voice note from the transcript.
+   - Return the gist, concrete asks, decisions, and any action items.
+   - Mention the source timestamp when it helps disambiguate.
+   - Do not include a full transcript unless {{USER_NAME}} asks for it.
+
+## Rules
+- Do not write to the Messages database or send messages.
+- Do not summarize private conversations by default.
+- Do not reread old conversations outside the lower bound unless log state is missing or broken.
+- Do not notify on casual chatter, emoji-only replies, or low-signal back-and-forth.
+- Do not miss productive conversations just because the concrete idea came from {{USER_NAME}}'s sent messages.
+- Do not promote vague conversation themes; only capture concrete actions, decisions, or waiting loops.
+- Do not write private social detail into the note when there is no durable task implication.
+- Do not rely on Contacts names when mapping is ambiguous.
+- Do not write durable message-derived state directly into `Notes and Journal` except as part of a later daily rendering.
+- Do not leave `[[vault/Backlog.md]]` stale when this run adds, completes, dismisses, or changes visible ledger/decision state.
+- Do not OCR or classify every attachment by default; narrow from metadata first.
+- Do not copy rendered review images when the original attachment file is available.
+- Do not upload Messages audio to third-party transcription services unless {{USER_NAME}} explicitly approves it.
+- Do not leave long-running transcription processes active after the answer is available.
+
+## Exception Rule
+If the messages baseline is missing or unreliable, do one narrow fallback pass over a recent window just wide enough to reestablish state, then continue incrementally.
+
+## Output Contract
+- Post nothing when no attention is required.
+- Keep durable message-derived state in `[[vault/Operations/ACTION_LEDGER.md]]` and `[[vault/Operations/DECISION_QUEUE.md]]`.
+- Refresh `[[vault/Backlog.md]]` whenever durable message-derived state changes.
+- When posting, include only the required action, who it is from, and the most relevant context.
+- For attachment retrieval, return the exact saved file path plus the source timestamp.
+- For voice-note summaries, return the summary and any action item; only mention transcription mechanics when confidence or provenance matters.

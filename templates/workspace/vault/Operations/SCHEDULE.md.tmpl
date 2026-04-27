@@ -1,0 +1,123 @@
+---
+summary: Scheduler-owned recurring personal tasks for the thread heartbeat
+last_updated: "{{INSTALL_DATETIME_LOCAL}}"
+read_when:
+  - scheduler wakeup
+  - changing recurring task behavior
+  - checking what is due
+---
+
+# Task Schedule
+
+- Timezone: `{{TIMEZONE}}`
+- Dispatcher heartbeat: Codex Desktop automation, every {{SCHEDULER_CADENCE_MINUTES}} minutes when configured
+- Dispatcher skill: `.agents/skills/tasks/scheduler/SKILL.md`
+- Run history: [[Operations/LOG.md]]
+
+## Active Tasks
+
+### morning-cos
+- status: active
+- priority: 1
+- skill: `.agents/skills/tasks/morning-cos/SKILL.md`
+- due_rule: once_per_day_after_time
+- target_time: {{MORNING_BRIEF_TIME}}
+- catch_up: yes, same local day until completed
+- notify: always
+- touches:
+  - [[Operations/ACTION_LEDGER.md]]
+  - [[Operations/DECISION_QUEUE.md]]
+  - [[Backlog.md]]
+  - [[Notes and Journal.md]]
+  - [[Operations/LOG.md]]
+  - [[Operations/POTENTIAL_TASK_DECISIONS.md]]
+  - vault/Operations/.machine/chronicle-harvest/outbox.jsonl
+  - vault/Operations/.machine/codex-session-harvest/outbox.jsonl
+- notes: Reconcile canonical state in `ACTION_LEDGER` and `DECISION_QUEUE`, refresh `Backlog`, review relevant source candidates, and post a real morning brief.
+
+### inbox-attention
+- status: {{INBOX_ATTENTION_STATUS}}
+- priority: 2
+- skill: `.agents/skills/tasks/inbox-attention/SKILL.md`
+- due_rule: every_n_hours_from_last_success
+- interval_hours: 2
+- catch_up: yes, one recovery pass over unseen relevant email since the latest successful email-reviewing task
+- notify: only_if_attention_required
+- touches:
+  - [[Operations/LOG.md]]
+  - [[Operations/ACTION_LEDGER.md]]
+  - [[Operations/DECISION_QUEUE.md]]
+  - [[Backlog.md]]
+  - [[Operations/EMAIL_DRAFT_QUEUE.md]]
+  - [[Operations/EMAIL_LOG.md]]
+- notes: Active only when Gmail access is verified. Check only new relevant email, reconcile active drafts, persist durable actions/decisions, and do not write directly into the daily note.
+
+### messages-attention
+- status: {{MESSAGES_ATTENTION_STATUS}}
+- priority: 3
+- skill: `.agents/skills/tasks/messages-attention/SKILL.md`
+- due_rule: every_n_hours_from_last_success
+- interval_hours: 2
+- catch_up: yes, one recovery pass over unseen incoming messages since the latest successful messages-reviewing task
+- notify: only_if_attention_required
+- touches:
+  - [[Operations/LOG.md]]
+  - [[Operations/ACTION_LEDGER.md]]
+  - [[Operations/DECISION_QUEUE.md]]
+  - [[Backlog.md]]
+  - [[Operations/POTENTIAL_TASK_DECISIONS.md]]
+- notes: Active only when local Messages access is verified. Check read-only message activity, capture concrete actions/decisions/waiting loops, and notify only when attention is needed.
+
+### system-maintenance
+- status: active
+- priority: 4
+- skill: `.agents/skills/tasks/system-maintenance/SKILL.md`
+- due_rule: once_per_day_after_time
+- target_time: 21:30
+- catch_up: yes, same local day until completed
+- notify: only_if_attention_required
+- touches:
+  - [[Operations/Chief of Staff System.md]]
+  - [[Operations/ACTION_LEDGER.md]]
+  - [[Operations/DECISION_QUEUE.md]]
+  - [[Operations/SCHEDULE.md]]
+  - [[Operations/LOG.md]]
+  - [[Backlog.md]]
+  - [[Operations/Operator System.md]]
+  - [[Operations/OPERATOR_QUEUE.md]]
+  - [[Operations/OPERATOR_SCHEDULE.md]]
+  - [[Operations/OPERATOR_LOG.md]]
+  - [[Operations/OPERATOR_HANDOFF.md]]
+  - [[Notes and Journal.md]]
+  - [[Knowledge/Knowledge.md]]
+  - [[Knowledge/INBOX.md]]
+  - [[Operations/Vault Structure.md]]
+  - vault/Operations/.machine/chronicle-harvest/state.json
+  - vault/Operations/.machine/chronicle-harvest/outbox.jsonl
+  - vault/Operations/.machine/codex-session-harvest/state.json
+  - vault/Operations/.machine/codex-session-harvest/outbox.jsonl
+- notes: Audit system health, repair low-risk drift, align backlog/canonical state, review Operator and source-adapter health, process clear knowledge inbox items, maintain link hygiene, and improve skills/docs when failure modes are clear.
+
+### eod-review
+- status: active
+- priority: 5
+- skill: `.agents/skills/tasks/eod-review/SKILL.md`
+- due_rule: once_per_day_after_time
+- target_time: {{EOD_REVIEW_TIME}}
+- catch_up: yes, same local day until completed
+- notify: always
+- touches:
+  - [[Operations/ACTION_LEDGER.md]]
+  - [[Operations/DECISION_QUEUE.md]]
+  - [[Backlog.md]]
+  - [[Notes and Journal.md]]
+  - [[Operations/LOG.md]]
+- notes: Close the day cleanly, reconcile canonical state, refresh Backlog, keep Notes and Journal lightweight, and post a concise EOD brief.
+
+## Worker Heartbeats Outside This Schedule
+
+Operator, Chronicle Harvester, and Codex Session Harvester are separate persistent worker threads once setup has their thread ids and selected heartbeats. Their prompts live in [[Operations/worker-prompts/operator.md]], [[Operations/worker-prompts/chronicle-harvester.md]], and [[Operations/worker-prompts/codex-session-harvester.md]]. Do not run them as scheduler tasks in this CoS dispatcher.
+
+## Automation Notes
+
+This file owns due logic. Codex Desktop automations own wake-up timing. If no Codex automation is configured yet, ask Codex manually for `RUN SCHEDULER` from this workspace until setup creates the real heartbeat.

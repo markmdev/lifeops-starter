@@ -1,0 +1,157 @@
+---
+name: llm-wiki
+description: Build and maintain persistent interlinked markdown knowledge wikis. Use when the user asks to create or start a wiki, ingest sources into a wiki, query compiled wiki knowledge, lint or health-check a wiki, migrate wiki structure, or maintain a research knowledge base with raw sources, indexes, logs, schemas, and wikilinks.
+---
+
+# LLM Wiki
+
+Maintain a compounding markdown knowledge base rather than answering from scratch every time.
+
+## Core Posture
+
+Treat the wiki as an inspectable compiled knowledge artifact: raw sources stay authoritative and immutable, wiki pages synthesize and cross-link knowledge, and schema/index/log files keep the system navigable.
+
+This is a medium-freedom skill. Preserve the invariants, but adapt the page structure and synthesis style to the domain.
+
+## Start Here
+
+1. Resolve the wiki path.
+   - Use a user-specified path when given.
+   - In a project workspace, prefer the repo-local `wiki/` folder when it exists.
+   - In `{{WORKSPACE_PATH}}`, route {{USER_NAME}}'s personal vault knowledge through `vault/Knowledge/` and internal domain notes under `vault/` unless the user explicitly asks for a separate repo-local wiki.
+   - Otherwise use the configured or obvious local wiki path, and ask only if the path cannot be inferred safely.
+2. If the wiki exists, orient before changing anything:
+   - read `SCHEMA.md`
+   - read `index.md`
+   - read the last 20-30 entries of `log.md`
+   - for multi-domain wikis, orient at root first, then the selected domain
+3. If the wiki is missing or uninitialized, initialize it when the user request implies a clear domain.
+4. Before creating pages, search existing pages and indexes for the same entity, concept, or question.
+5. After any material change, update the relevant index and append a log entry.
+
+Read [wiki-operations.md](references/wiki-operations.md) when you need layouts, templates, ingest/query/lint details, or migration rules.
+
+## {{USER_NAME}}'s Clawd Knowledge Layer
+
+In `{{WORKSPACE_PATH}}`, this skill is the owner for the external-knowledge save/query loop, but not for every vault update.
+
+User-facing inputs:
+
+- `save this: <url>` means fetch the source, capture a raw snapshot when feasible, route it, create a compact source card when worth preserving, update reusable compiled pages only when justified, and report the vault links.
+- `use the knowledge base to answer: <question>` means answer from `DOCS_INDEX.md`, relevant `vault/` domain notes, and relevant `vault/Knowledge/domains/<domain>/` pages, then file the answer only if reusable.
+- Items in `vault/Knowledge/INBOX.md` are the same save/query requests in an Obsidian dropbox; process them and move completed items to `Processed`.
+
+Routing:
+
+- Internal context about {{USER_NAME}}'s life, projects, accounts, relationships, or current situations belongs in source-linked domain notes under `vault/<Domain>/`, not in external source-card domains.
+- External saved material belongs in `vault/Knowledge/domains/<domain>/` only when it will likely be reused across questions, tasks, or decisions.
+- Active tasks and reminders belong in `vault/Operations/ACTION_LEDGER.md`; decisions and reprompt rules belong in `vault/Operations/DECISION_QUEUE.md`.
+
+Output:
+
+- For saves, tell {{USER_NAME}} what raw snapshot was captured or why raw capture was skipped, then link the created or updated vault pages.
+- For grounded questions, answer first, cite the relevant vault pages with wikilinks, and clearly say when the knowledge layer does not contain enough evidence.
+- Do not ask {{USER_NAME}} to choose the folder unless the domain choice is genuinely ambiguous and consequential.
+- When writing inside `{{WORKSPACE_PATH}}/vault`, use vault-root-relative wikilinks such as `[[Knowledge/Knowledge.md]]`; do not use `[[vault/...]]`, absolute paths, or code-spanned wikilinks.
+
+## Ownership Rules
+
+- Use this skill for persistent markdown knowledge bases.
+- Do not use it for one-off notes, ordinary project docs, daily journals, or private operational ledgers unless the user explicitly wants wiki-style synthesis.
+- For {{USER_NAME}}'s `clawd` vault, internal context such as lease details, project status, people, and account facts belongs in source-linked domain notes under `vault/<Domain>/`; use wiki-style domains for external research and saved material that will receive repeated sources or repeated questions.
+- Do not treat a wiki as generic RAG storage; compile durable pages that future agents can inspect.
+- Do not create duplicate pages when an existing page can be updated.
+- Do not mix unrelated domains into one taxonomy once the wiki needs distinct source universes, recurring questions, or evaluation frameworks.
+
+## Core Invariants
+
+- Raw sources are immutable evidence snapshots. Corrections and synthesis go into wiki pages, not `raw/`.
+- Capture raw source text or structured source output under `raw/` whenever feasible so future agents can inspect the actual source instead of relying on a compressed summary. Prefer `raw/sources/<slug>.md` or `raw/sources/<slug>.json` for text/metadata and `raw/assets/<slug>/` for media.
+- When copyright, access, source-system, privacy, or size constraints make a full raw copy inappropriate, save the canonical URL, retrieval method, retrieval notes, and limited source excerpts or metadata that are sufficient for future rediscovery. Say clearly in the source card why full raw capture was skipped.
+- Source cards are not endorsements and they are not the growing knowledge surface. They are compact provenance/index records that point to raw source snapshots, preserve what a source claims, and summarize only enough for routing.
+- For saved external sources that might guide future action, record source role, agent assessment, {{USER_NAME}} status, risk level, confidence, and cautions so future agents know whether the source is merely preserved, useful as a hypothesis, usable with constraints, requires {{USER_NAME}}'s decision, or has a clear non-negotiable risk. Do not turn agent caution into {{USER_NAME}} preference.
+- Compiled pages are the synthesis layer: concept pages, evaluation pages, comparisons, playbooks, decision rules, checklists, and reusable query answers. Future agents should treat compiled pages as the current neutral map of source-derived patterns, risks, contradictions, candidate applications, and open decisions. They are not {{USER_NAME}}'s principles or preferences unless {{USER_NAME}} explicitly wrote or approved them.
+- Do not write pages titled or framed as "{{USER_NAME}}'s principles", "{{USER_NAME}}'s doctrine", "{{USER_NAME}}'s strategy", or "approved practices" unless {{USER_NAME}} explicitly provides or approves that content. When the agent is synthesizing sources, use neutral labels such as `Observed Patterns`, `Source-Derived Hypotheses`, `Risks And Cautions`, `Risk Gates`, `Candidate Applications`, `Needs {{USER_NAME}} Decision`, and `Open Questions`.
+- Be preference-neutral by default. Do not infer that {{USER_NAME}} wants or does not want to use a tactic because it is controversial, high-risk, spammy-looking, hypey, distasteful, or outside the agent's taste. Preserve the tactic as a candidate, hypothesis, cautionary artifact, or decision item unless there is a clear evidence-based reason to mark it non-applicable.
+- `SCHEMA.md` owns conventions, page thresholds, frontmatter, and taxonomy.
+- `index.md` owns navigation.
+- `log.md` owns chronological activity history.
+- Pages should use `[[wikilinks]]` and should not become isolated piles of notes.
+- Tags must come from the schema taxonomy; add taxonomy entries before using new tags.
+- Valuable query answers should be filed back only when they would be painful to re-derive.
+- Source cards should stay relatively stable after ingest. The material that grows over time is compiled domain understanding: concepts, comparisons, evaluations, playbooks, checklists, and reusable query answers.
+- For practice domains, distill sources into practices, decision rules, checklists, comparisons, and anti-patterns. Article summaries alone are usually the wrong output.
+
+## Common Operations
+
+### Initialize
+
+Create the smallest coherent wiki for the domain:
+- `SCHEMA.md`
+- `index.md`
+- `log.md`
+- `raw/`
+  - `sources/` for captured source text, structured source dumps, or retrieval metadata
+  - `assets/` for images, screenshots, diagrams, and other media
+- page folders such as `entities/`, `concepts/`, `comparisons/`, and `queries/`
+
+For unrelated or growing domains, use `domains/<slug>/` and keep root files as the domain map.
+
+### Ingest
+
+Capture raw first, then index, then synthesize:
+1. Fetch the canonical source through the most source-specific reliable tool available.
+2. Save raw text, structured output, retrieval metadata, or allowed excerpts under `raw/`. Use `raw/sources/<slug>.md` or `raw/sources/<slug>.json` for text and metadata, and `raw/assets/<slug>/` for media. If full raw capture is inappropriate, record why.
+3. Create or update a compact source card. Include the canonical URL, retrieval method, raw snapshot path or skip reason, neutral source claims, evaluation metadata, cautions, and related compiled pages. Do not turn the source card into an essay or substitute for the raw source.
+4. If the saved source includes images, screenshots, diagrams, or other media, inspect them before synthesis. Capture image-derived context in the source card or compiled page, and explicitly note any media that could not be reviewed.
+5. Classify the source's role and agent assessment before distilling it:
+   - `source_role`: `claim`, `case_study`, `reference`, `hypothesis`, `cautionary`, or `counterexample`
+   - `agent_assessment`: `preserve_only`, `use_as_hypothesis`, `usable_with_constraints`, `do_not_apply`, or `needs_mark_decision`
+   - `mark_status`: `not_reviewed`, `mark_approved`, `mark_rejected`, or `mark_authored`
+   - `risk_level`: `low`, `medium`, or `high`
+   Use `mark_approved`, `mark_rejected`, or `mark_authored` only when {{USER_NAME}} explicitly says so.
+   Use `do_not_apply` narrowly: reserve it for tactics that require illegal activity, obvious platform/account evasion, deception that cannot be removed without changing the tactic, rights violations, privacy violations, or another non-negotiable blocker. Otherwise prefer `use_as_hypothesis`, `usable_with_constraints`, or `needs_mark_decision`.
+6. Identify entities, concepts, comparisons, durable questions, observed patterns, source-derived hypotheses, risk-gated tactics, and decisions {{USER_NAME}} may need to make.
+7. Search for existing pages before creating new ones.
+8. Create or update only pages that meet the schema's page threshold.
+9. When a source is controversial, manipulative, unverified, or outside the agent's taste, preserve it as a source but put the agent judgment in neutral compiled pages: useful observed mechanics, source-derived hypotheses, risk gates, candidate applications, open decisions, and unanswered claims. Do not infer {{USER_NAME}}'s personal preferences or personal principles from the source. If the source might be useful but has risks, say what conditions would make it usable instead of rejecting it outright.
+10. Add cross-links, update index entries, and append a log entry.
+
+### Query
+
+Answer from compiled wiki knowledge:
+1. Read the index and relevant pages.
+2. Read compiled pages before source cards when both exist. Source cards are routing/provenance; compiled pages carry the current neutral synthesis, risks, constraints, and open decisions.
+3. Read raw source snapshots, source-system originals, or source cards when the question depends on exact claims, evidence, wording, or currentness.
+4. Search all markdown when the wiki is large or the index may miss terms.
+5. Synthesize with page citations using wikilinks.
+6. File reusable answers into `queries/` or update compiled pages when the answer changes domain understanding. Do not grow source cards into long summaries.
+7. Log the query.
+
+### Lint
+
+Check for:
+- broken wikilinks
+- orphan pages
+- missing index entries
+- invalid frontmatter
+- tags outside the schema taxonomy
+- stale or contradictory pages
+- oversized pages that should split
+- logs that need rotation
+
+## Split And Migration Rules
+
+- Split a page when it becomes hard to scan or mixes distinct subtopics.
+- Create a new domain when a topic has its own source universe, taxonomy, or repeated questions.
+- If content was filed in the wrong domain, migrate it in the same session: move pages, rewrite frontmatter and wikilinks, update indexes/logs, and keep each domain locally intelligible.
+- Archive superseded pages instead of leaving obsolete pages in the active index.
+
+## Closeout
+
+When changing the wiki, report:
+- wiki path and selected domain
+- raw sources captured
+- pages created, updated, moved, archived, or deleted
+- index/schema/log updates
+- lint findings or unresolved decisions

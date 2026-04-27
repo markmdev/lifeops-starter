@@ -1,0 +1,38 @@
+---
+name: scheduler
+description: Dispatch recurring personal tasks from a markdown schedule and run log when a lightweight heartbeat wakes up. Use when a thread heartbeat should decide what is due, run the owning task skill, log the result, and stop silently if nothing is due.
+---
+
+# Personal Task Scheduler
+
+## Core Instruction
+Use the schedule and run log as the durable source of truth for what is due; wake up, run only the due tasks, log each attempted run, and stop silently when nothing is due.
+
+## Default Workflow
+1. Read [[vault/Operations/SCHEDULE.md]] and [[vault/Operations/LOG.md]] in full.
+2. Determine the current local time using the `Timezone:` value declared in `SCHEDULE.md`.
+3. Build the active task list from `SCHEDULE.md` in priority order.
+4. For each active task, find the latest matching `status=completed` entry in `LOG.md`.
+5. Evaluate due-ness using the task's declared rule:
+   - `once_per_day_after_time`: due when the current local time is at or after `target_time` and there is no completed entry for that task whose `scheduled` timestamp matches today's target time.
+   - `every_n_hours_from_last_success`: due when no successful run exists yet, or when at least `interval_hours` have elapsed since the latest completed run.
+6. Respect catch-up rules. If the exact target time was missed but the task is still inside its allowed catch-up window, run it for the missed scheduled time instead of skipping it.
+7. Run each due task by following its linked skill from `SCHEDULE.md`.
+8. After each task run, append one bullet to `LOG.md` with `task`, `scheduled`, `ran`, `status`, `notify`, and a short factual note.
+9. Refresh `last_updated` in `LOG.md` when you append entries.
+
+## Rules
+- Do not post any message when no task is due.
+- Do not execute the same task twice in one wake-up.
+- Do not treat a task as complete unless `LOG.md` has a matching `status=completed` entry.
+- Do not skip a missed `once_per_day_after_time` task on the same local day when its schedule says `catch_up: yes`.
+- Do not let one failed task block other due tasks; log the failure and continue.
+- Do not invent schedules or task fields that are not present in `SCHEDULE.md`.
+
+## Exception Rule
+If `SCHEDULE.md` or `LOG.md` is malformed or missing required fields, repair only the minimum structure needed to restore the scheduler, log what you changed, and continue with the remaining due tasks if possible.
+
+## Output Contract
+- If nothing is due, produce no chat message.
+- If tasks ran, only task-owned messages should appear in the thread.
+- `LOG.md` must receive one entry for every task attempted during the wake-up.

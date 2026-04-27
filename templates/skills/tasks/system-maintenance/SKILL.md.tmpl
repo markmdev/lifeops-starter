@@ -1,0 +1,99 @@
+---
+name: system-maintenance
+description: Run the Chief of Staff system-maintenance pass when the scheduler asks for it or when {{USER_NAME}} wants the operating system improved. Use to audit CoS state, detect stale or duplicated items, maintain the action ledger and decision queue, update skills/docs when a failure mode is clear, and ask {{USER_NAME}} for decisions or feedback the system needs.
+---
+
+# System Maintenance
+
+## Core Instruction
+Treat the Chief of Staff system itself as an active product: audit it, repair drift, improve durable behavior, and ask {{USER_NAME}} for the specific decisions or feedback needed to keep it moving.
+
+## Default Workflow
+1. Read:
+   - [[vault/Operations/Chief of Staff System.md]]
+   - [[vault/Operations/ACTION_LEDGER.md]]
+   - [[vault/Operations/DECISION_QUEUE.md]]
+   - [[vault/Operations/SCHEDULE.md]]
+   - [[vault/Operations/LOG.md]]
+   - [[vault/Operations/SIGNAL_INBOX.md]]
+   - [[vault/Backlog.md]]
+   - [[vault/Operations/Operator System.md]]
+   - [[vault/Operations/OPERATOR_QUEUE.md]]
+   - [[vault/Operations/OPERATOR_SCHEDULE.md]]
+   - [[vault/Operations/OPERATOR_LOG.md]]
+   - [[vault/Operations/OPERATOR_HANDOFF.md]]
+   - [[vault/Notes and Journal.md]]
+   - [[vault/Knowledge/Knowledge.md]]
+   - [[vault/Knowledge/INBOX.md]]
+   - `vault/Operations/.machine/chronicle-harvest/state.json`
+   - `vault/Operations/.machine/chronicle-harvest/outbox.jsonl`
+   - `vault/Operations/.machine/codex-session-harvest/state.json`
+   - `vault/Operations/.machine/codex-session-harvest/outbox.jsonl`
+   - relevant task skills under `{{WORKSPACE_PATH}}/.agents/skills/tasks/`
+2. Check system health:
+   - stale active ledger items
+   - decisions whose reprompt policy says they should be surfaced
+   - completed items still visible as active work
+   - `Backlog.md` missing active/waiting/candidate work that is visible in canonical state
+   - `Backlog.md` showing completed, dismissed, or superseded items
+   - Operator queue items missing risk class, mode, allowed actions, stop conditions, or proof requirements
+   - Operator scheduled tasks without catch-up, stop conditions, or proof requirements
+   - Operator handoffs that need {{COS_NAME}}/{{USER_NAME}} and have not been surfaced
+   - active items missing owner, source, evidence, or next action
+   - daily note sections that grew heavy again
+   - schedule entries that no longer match skill behavior
+   - knowledge-inbox items that are clear enough to process without bothering {{USER_NAME}}
+   - Obsidian links that are code-spanned, have a leading `vault/`, or point at missing vault files
+   - source cards that should be compiled into a more useful page after repeated similar sources
+   - Chronicle Harvester outbox candidates stuck in `new` without CoS review or missing lifecycle review fields after consumption
+   - Chronicle Harvester repeated false positives or missing state checkpoints
+   - Codex Session Harvester outbox candidates stuck in `new` without CoS review or missing lifecycle review fields after consumption
+   - Codex Session Harvester missing worker thread, stale checkpoint, duplicate candidates, or repeated false positives
+   - repeated failure modes that should become skill changes
+3. Repair low-risk drift directly:
+   - normalize ledger wording
+   - remove duplicates
+   - update `last_reviewed`
+   - move answered decisions to resolved when evidence is clear
+   - update schedule notes when they no longer match owner skills
+   - route clear knowledge-inbox items through `[$llm-wiki]({{WORKSPACE_PATH}}/.agents/skills/knowledge/llm-wiki/SKILL.md)`, then move them to `Processed`
+   - run `python3 scripts/lint-vault-links.py --fix` for safe mechanical link cleanup, then inspect any remaining findings
+   - mark harvester candidates promoted, dismissed, superseded, needs_verification, or ignored_noise when CoS has reviewed them
+   - refresh `[[vault/Backlog.md]]` after ledger or decision queue repairs
+   - update Operator queue/schedule/log/handoff when execution-state drift is clear
+   - rebuild `DOCS_INDEX.md` after routed doc changes
+4. Escalate to {{USER_NAME}} when human judgment is needed:
+   - ask a crisp question
+   - include the recommendation
+   - explain why the system needs the answer
+   - keep it to the minimum set of questions worth interrupting for
+5. Improve the system when the evidence is clear:
+   - update owner skills when a recurring failure mode appears
+   - update `Chief of Staff System.md` when architecture changes
+   - add a new operations file only when it removes real ambiguity or state drift
+   - do not wait for {{USER_NAME}} to invent system improvements
+6. Log the maintenance run in `[[vault/Operations/LOG.md]]`.
+
+## Rules
+- Do not treat {{USER_NAME}}'s silence as approval for high-risk actions.
+- Do not ask {{USER_NAME}} to inspect `vault/Operations/` manually; surface decisions in the brief or chat.
+- Do not make the daily note heavier to solve agent-state problems.
+- Do not create a new skill or state file when an existing owner can be tightened.
+- Do not leave a known recurring failure mode as chat-only knowledge.
+- Do not change major architecture silently; explain the tradeoff and the change.
+- Do not notify {{USER_NAME}} for purely internal cleanup unless it changes what he sees or requires a decision.
+- Do not let system-maintenance become a general task executor; it maintains the CoS system, not {{USER_NAME}}'s whole task list.
+- Do not promote Chronicle or Codex-session candidates into source-of-truth state without evidence; if the candidate is useful but unverified, route it to verification or keep it as a candidate.
+- Do not ask {{USER_NAME}} where a saved source belongs unless routing cannot be inferred and the wrong domain would materially hurt future use.
+- Do not turn one saved source into a new domain unless the topic is likely to receive repeated sources or questions.
+
+## Exception Rule
+If the system is too inconsistent to repair safely in one pass, stop after documenting the inconsistency, create or update the smallest decision/repair item in `DECISION_QUEUE` or `ACTION_LEDGER`, and ask {{USER_NAME}} only for the blocker that prevents repair.
+
+## Output Contract
+- If no user attention is needed, log the run and stay silent.
+- If attention is needed, post a short system-maintenance note with:
+  - what changed or what is blocked
+  - what decision or feedback {{COS_NAME}} needs from {{USER_NAME}}
+  - {{COS_NAME}}'s recommendation
+- Any durable system change must update the owning file or skill, not just the chat.

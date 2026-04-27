@@ -1,0 +1,11 @@
+{
+  "USER_NAME": "No Integration User",
+  "COS_NAME": "Chief of Staff",
+  "OPERATOR_NAME": "Operator",
+  "TIMEZONE": "UTC",
+  "GMAIL_STATUS": "disabled_by_user",
+  "CALENDAR_STATUS": "disabled_by_user",
+  "MESSAGES_STATUS": "unsupported_os",
+  "CODEX_SESSIONS_STATUS": "missing",
+  "CHRONICLE_STATUS": "missing"
+}

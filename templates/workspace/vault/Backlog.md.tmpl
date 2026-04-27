@@ -1,0 +1,47 @@
+---
+summary: Human-readable backlog view rendered from the Action Ledger for {{USER_NAME}}
+last_updated: "{{INSTALL_DATETIME_LOCAL}}"
+read_when:
+  - backlog
+  - current tasks
+  - open loops outside today
+  - planning
+---
+
+# Backlog
+
+This is the human-readable backlog. It is rendered from [[Operations/ACTION_LEDGER.md]] and [[Operations/DECISION_QUEUE.md]], which remain the source of truth. Today's selected working set lives in [[Notes and Journal.md#Today]].
+
+## How To Read This
+
+- `Today` is the small daily cockpit.
+- `Backlog` is unresolved work outside Today.
+- `Waiting` means the next movement depends on another person, system, date, or response.
+- `Candidate` means an idea is worth remembering, but not yet committed.
+- Domains such as finance, school, projects, housing, and health are context labels. They are not separate planning systems.
+- Multi-session builds may have context pages under `Projects/`, but tasks still live in the ledger.
+- A Codex thread is only where a task may be worked on; it is not a task status.
+
+## Active Backlog
+
+- LifeOps setup: review `.lifeops/setup-report.md`, finish not-yet-connected integrations, and verify all intended heartbeats.
+- CoS operating system: keep improving schedules, skills, state files, source adapters, and {{USER_NAME}}-facing surfaces.
+- Knowledge I/O: save useful external sources through `save this: <url>` or [[Knowledge/INBOX.md]], then grow compiled knowledge only when it becomes reusable.
+- Source adapters: enable Chronicle and Codex Session Harvesters after source verification and worker thread-id capture.
+- Operator: create the persistent {{OPERATOR_NAME}} thread when {{USER_NAME}} wants autonomous/assisted execution active; setup wires the heartbeat after thread-id capture.
+
+## Today-Adjacent
+
+These are already visible in [[Notes and Journal.md#Today]], but they are included here so the backlog view stays complete.
+
+- Review the installed LifeOps setup report and decide which integrations to enable first.
+- If Codex Desktop automation is available, create the CoS scheduler heartbeat and verify the first due/no-due run.
+
+## Waiting
+
+- Not-yet-connected integrations or unavailable source connectors should be listed here by {{COS_NAME}} with evidence and next action.
+
+## Candidates
+
+- Dashboard: build a local review surface for Today, Backlog, Decisions, Waiting, Drafts, Recent Signals, and Source Health once file-backed state stabilizes.
+- Additional source adapters: add new inputs when {{USER_NAME}} provides a useful CLI, API, export, or connector.

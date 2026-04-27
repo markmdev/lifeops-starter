@@ -1,0 +1,19 @@
+---
+summary: Candidate signal lifecycle and source-adapter review state
+last_updated: "{{INSTALL_DATETIME_LOCAL}}"
+read_when: [signal inbox, source candidates, harvester output]
+---
+
+# Signal Inbox
+
+Source adapters may produce candidates, but candidates are not operational state.
+
+Every candidate must eventually become one of: `promoted`, `dismissed`, `superseded`, `needs_verification`, or `ignored_noise`.
+
+When {{COS_NAME}} reviews a candidate, record reviewed_at, reviewed_by, decision, destination if promoted, reason, and superseded_by if applicable.
+
+Do not leave stale candidates marked `new` after they influence [[Operations/ACTION_LEDGER.md]], [[Operations/DECISION_QUEUE.md]], a domain note, [[Backlog.md]], or [[Notes and Journal.md]].
+
+## Current State
+
+No source adapters activated yet.

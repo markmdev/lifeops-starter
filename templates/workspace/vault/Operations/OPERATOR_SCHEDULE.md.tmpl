@@ -1,0 +1,47 @@
+---
+summary: Operator-owned scheduled execution checks run from the Operator heartbeat
+last_updated: "{{INSTALL_DATETIME_LOCAL}}"
+read_when:
+  - operator schedule
+  - scheduled task
+  - recurring check
+---
+
+# Operator Schedule
+
+This schedule is checked by {{OPERATOR_NAME}} on every heartbeat. The Codex automation wakes {{OPERATOR_NAME}} every {{OPERATOR_CADENCE_MINUTES}} minutes after activation; this file decides what {{OPERATOR_NAME}} does when awake.
+
+Run history lives in [[Operations/OPERATOR_LOG.md]].
+
+## Rules
+
+- Support missed-run recovery. If the laptop slept, run each missed scheduled task once unless the task says otherwise.
+- Do not duplicate existing specialist watchers unless {{COS_NAME}} intentionally migrates them here.
+- Keep task-specific behavior in skills or clear instructions, not in the heartbeat prompt.
+- Notify only when the scheduled task finds a material result, is blocked, or needs {{USER_NAME}}/{{COS_NAME}}.
+- Log every attempted scheduled task.
+
+## Active Scheduled Tasks
+
+No active Operator scheduled tasks yet.
+
+## Existing Watchers Not Migrated
+
+None yet.
+
+## Template
+
+```yaml
+### schedule_id
+- status: active
+- cadence: every_1_hour | every_15_minutes | once_per_day_after_time
+- target_time: HH:MM
+- catch_up: yes/no
+- mode: autonomous | assisted
+- desired_output: execute | prepare_draft | prepare_packet | verify | prompt_specialist | monitor | preserve_evidence
+- risk: low | medium | high
+- instructions: concrete task instruction
+- allowed_actions: what Operator may do without asking
+- stop_conditions: when Operator must stop and ask/log
+- proof_required: screenshot, file path, URL, draft link, or summary
+```

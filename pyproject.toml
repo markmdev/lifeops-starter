@@ -1,0 +1,5 @@
+[project]
+name = "lifeops-starter"
+version = "0.1.0"
+description = "Public starter kit for installing a private Codex/Obsidian LifeOps"
+requires-python = ">=3.10"

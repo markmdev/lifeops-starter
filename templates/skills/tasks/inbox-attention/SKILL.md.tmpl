@@ -1,0 +1,60 @@
+---
+name: inbox-attention
+description: Check only newly arrived relevant Gmail since the latest completed email-reviewing run, reconcile active email draft queue statuses against mailbox state, persist email-derived actions and decisions into operations state, refresh the human-readable backlog when state changes, and notify {{USER_NAME}} only when attention is required.
+---
+
+# Inbox Attention
+
+## Core Instruction
+Treat inbox monitoring as an attention filter and state reconciler: update draft status from Gmail, review only new relevant mail, persist durable actions or decisions into operations state, refresh the backlog when those state files change, and stay silent unless {{USER_NAME}} needs attention.
+
+## Default Workflow
+1. Read:
+   - [[vault/Operations/LOG.md]]
+   - [[vault/Operations/ACTION_LEDGER.md]]
+   - [[vault/Operations/DECISION_QUEUE.md]]
+   - [[vault/Backlog.md]]
+   - [[vault/Notes and Journal.md]]
+   - [[vault/Operations/EMAIL_DRAFT_QUEUE.md]]
+   - [[vault/Operations/EMAIL_LOG.md]]
+2. Find the latest completed email-reviewing entry among `morning-cos`, `inbox-attention`, and `email-baseline`.
+3. Reconcile active `EMAIL_DRAFT_QUEUE.md` entries against Gmail state before processing new mail:
+   - if the draft appears in Sent, remove it from `Live Drafts` and append `status=sent` to `EMAIL_LOG.md`
+   - if the draft was deleted, rejected, or superseded by a newer thread message, remove it from `Live Drafts` and append `status=dismissed` or `status=stale`
+   - if the draft still exists and the thread has not advanced, leave it active
+   - if state is ambiguous, leave it active and mention ambiguity only if it matters
+4. Review Gmail only for mail newer than the lower bound.
+5. Ignore newsletters, promos, event spam, automated receipts, OTP codes, and automated app/testing noise unless they create a clear personal action item.
+6. Identify action-worthy items: reply needed, deadline, decision, blocker, follow-up, payment issue, account/security issue, or concrete personal action.
+7. Persist durable items into operations state:
+   - actions, waiting states, and open loops go to `ACTION_LEDGER`
+   - questions requiring {{USER_NAME}}'s judgment go to `DECISION_QUEUE`
+   - final draft outcomes go to `EMAIL_LOG`
+   - do not use `Notes and Journal` as the canonical database
+8. If `ACTION_LEDGER` or `DECISION_QUEUE` changed, refresh `[[vault/Backlog.md]]` as the readable projection of unresolved work. Do not update `Notes and Journal` just to show backlog changes.
+9. If a thread clearly needs a reply and the next move is draftable, use [$email-drafting]({{WORKSPACE_PATH}}/.agents/skills/communications/email-drafting/SKILL.md) to create a native Gmail draft and stage it in `EMAIL_DRAFT_QUEUE.md`.
+10. If a new item is urgent, high-risk, reply-needed, or time-sensitive, notify {{USER_NAME}} with the direct Gmail link.
+11. If nothing requires attention and queue reconciliation only found normal outcomes, do not post.
+
+## Rules
+- Do not summarize the inbox when there is nothing actionable.
+- Do not reread old mail outside the current lower bound unless the log state is broken.
+- Do not notify for FYI items, general updates, or work-only automated app/testing activity.
+- Do not bundle low-signal messages into a noisy alert.
+- Do not force a draft when the right move is simply to surface the issue.
+- Do not notify just because a staged draft moved to Sent; for {{USER_NAME}} that is usually approval-by-action.
+- Do not leave sent, dismissed, deleted, or superseded drafts in `EMAIL_DRAFT_QUEUE.md` after Gmail clearly proves the outcome.
+- Do not append duplicate `EMAIL_LOG.md` final-status lines.
+- Do not write durable inbox-derived obligations directly into `Notes and Journal` except as part of the lightweight daily rendering when truly immediate.
+- Do not surface an attention-worthy item in-thread and then fail to persist it in `ACTION_LEDGER` or `DECISION_QUEUE`.
+- Do not leave `[[vault/Backlog.md]]` stale when this run adds, completes, dismisses, or changes visible ledger/decision state.
+
+## Exception Rule
+If log state is missing or unreliable, use the narrowest recent fallback window needed to recover a safe lower bound, then continue incrementally.
+
+## Output Contract
+- Post nothing when no action is required and no draft was staged.
+- When posting, include only the required action, sender/source, whether a draft was staged, and direct Gmail link.
+- Keep `[[vault/Operations/EMAIL_DRAFT_QUEUE.md]]` limited to active draft candidates.
+- Keep durable email-derived state in `[[vault/Operations/ACTION_LEDGER.md]]` and `[[vault/Operations/DECISION_QUEUE.md]]`.
+- Refresh `[[vault/Backlog.md]]` whenever durable inbox-derived state changes.

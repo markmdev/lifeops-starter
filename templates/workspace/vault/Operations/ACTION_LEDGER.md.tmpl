@@ -1,0 +1,25 @@
+---
+summary: Canonical action ledger for active tasks, waiting states, candidates, and recent completions
+last_updated: "{{INSTALL_DATETIME_LOCAL}}"
+read_when: [action ledger, tasks, open loops]
+---
+
+# Action Ledger
+
+## Active
+
+- [ ] act_{{TODAY_YYYYMMDD}}_maintain_lifeops | status: open | owner: {{COS_NAME}} | next: Keep schedules, ledgers, decisions, and docs reconciled.
+- [ ] act_{{TODAY_YYYYMMDD}}_review_setup | status: open | owner: {{USER_NAME}} | next: Review `.lifeops/setup-report.md` and remaining integration/setup choices.
+- [ ] act_{{TODAY_YYYYMMDD}}_scheduler_heartbeat | status: open | owner: {{COS_NAME}} | next: Create and verify the Codex Desktop `lifeops-scheduler` heartbeat, or keep scheduler mode `manual_pending_automation` visible until it is configured.
+
+## Waiting
+
+_None._
+
+## Candidates
+
+_None._
+
+## Recently Done
+
+- [x] act_{{TODAY_YYYYMMDD}}_lifeops_installed | status: done | owner: setup-lifeops | evidence: `.lifeops/setup-report.md`

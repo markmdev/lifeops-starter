@@ -1,0 +1,13 @@
+{
+  "USER_NAME": "Test User",
+  "USER_SHORT_NAME": "Test",
+  "COS_NAME": "Chief of Staff",
+  "OPERATOR_NAME": "Operator",
+  "TIMEZONE": "America/Los_Angeles",
+  "MORNING_BRIEF_TIME": "07:00",
+  "EOD_REVIEW_TIME": "22:00",
+  "SCHEDULER_CADENCE_MINUTES": "30",
+  "OPERATOR_CADENCE_MINUTES": "15",
+  "SCHEDULER_MODE": "manual_pending_automation",
+  "TONE_PREFERENCE": "concise and practical"
+}

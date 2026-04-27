@@ -1,0 +1,105 @@
+---
+name: morning-cos
+description: Run the daily 7 AM Chief of Staff pass by reconciling the action ledger and decision queue, refreshing the human-readable backlog, rendering a lightweight daily note, reviewing only new relevant email, and posting a real morning brief with situation, changes, rationale, and open questions.
+---
+
+# Morning CoS
+
+## Core Instruction
+Run the morning control-plane pass: reconcile canonical operational state in `ACTION_LEDGER` and `DECISION_QUEUE`, refresh the human-readable backlog, render only a small daily view into `Notes and Journal`, and brief {{USER_NAME}} on what matters today and why.
+
+## Default Workflow
+1. Read:
+   - [[vault/Operations/ACTION_LEDGER.md]]
+   - [[vault/Operations/DECISION_QUEUE.md]]
+   - [[vault/Backlog.md]]
+   - [[vault/Notes and Journal.md]]
+   - [[vault/Operations/SCHEDULE.md]]
+   - [[vault/Operations/LOG.md]]
+   - [[vault/Operations/OPERATOR_LOG.md]]
+   - [[vault/Operations/OPERATOR_HANDOFF.md]]
+   - [[vault/Operations/POTENTIAL_TASK_DECISIONS.md]]
+   - `vault/Operations/.machine/chronicle-harvest/outbox.jsonl`
+   - `vault/Operations/.machine/codex-session-harvest/outbox.jsonl`
+2. Determine the current local date and time from the timezone declared in `[[vault/Operations/SCHEDULE.md]]`.
+3. Before replacing `Today`, reconcile the visible prior-day `Today` section if it is older than the current local date:
+   - checked `- [x]` items are completion evidence for that date
+   - convert checked items into that date's `**Progress:**` block using concise active-outcome wording
+   - mark equivalent `ACTION_LEDGER` entries `done` when the mapping is clear
+   - leave ambiguous mappings active and call them out in `Open Questions`
+4. Reconcile the action ledger:
+   - remove completed work from active daily rendering by setting matching items to `done`
+   - keep waiting states as `status=waiting`
+   - keep each active item in one current-state lane only
+   - if an item needs {{USER_NAME}}'s judgment, create or update a `DECISION_QUEUE` entry instead of hiding the question in prose
+   - do not use `Notes and Journal` as the canonical database
+5. Find the latest completed email-reviewing entry from `LOG.md` among `morning-cos`, `inbox-attention`, and `email-baseline`.
+6. Review Gmail only for mail newer than that lower bound. Ignore newsletters, promos, event spam, receipts, OTP codes, and automated app/testing noise unless they create a real personal action item.
+7. Convert new meaningful email signals into `ACTION_LEDGER` and `DECISION_QUEUE` entries:
+   - reply-needed, admin, deadline, blocker, or account/security items become ledger actions or waiting/open loops
+   - questions requiring {{USER_NAME}}'s judgment become decision entries with urgency and reprompt policy
+   - low-signal items are ignored
+8. Review new Operator log/handoff items:
+   - reconcile completed Operator work into `ACTION_LEDGER` and `Backlog` when proof is clear
+   - surface Operator blockers only when {{USER_NAME}} or {{COS_NAME}} needs to act today
+   - do not put Operator's internal work into {{USER_NAME}}'s Journal progress
+9. Review new Chronicle Harvester and Codex Session Harvester outbox candidates:
+   - ignore or mark no-op candidates whose `proposed_destination` is `ignore`
+   - verify high-impact candidates against authoritative sources before marking work done or changing operational state
+   - promote useful durable context to the right domain/project note only when it is stable enough for future agents
+   - promote possible actions or decisions into `ACTION_LEDGER` or `DECISION_QUEUE` only when confidence and evidence justify it
+   - do not ask {{USER_NAME}} to read the outbox
+10. Review recent Journal notes as user-authored context:
+   - promote concrete new action, waiting, or idea items into `ACTION_LEDGER`
+   - use `DECISION_QUEUE` for candidate ideas that need accept/reject/clarification
+   - do not rewrite {{USER_NAME}}'s freeform notes
+11. Refresh `[[vault/Backlog.md]]` from canonical state:
+   - group unresolved work as active backlog, today-adjacent, waiting, and candidates
+   - keep it human-readable, not exhaustive operational dump
+   - do not make it a second source of truth; it should point back to `ACTION_LEDGER` and `DECISION_QUEUE`
+   - treat domains/projects as context labels, not separate planning systems
+   - do not describe thread placement as if it were task status
+12. Render a lightweight `[[vault/Notes and Journal.md]]` daily surface:
+   - keep `Snapshot` to 2-3 sentences
+   - set `Today` to the current local date
+   - include `Focus` as the realistic daily slice
+   - include `Larger Picture` as 3-5 compact, non-canonical bullets when the note would otherwise hide important pending work or system direction
+   - include `If There Is Room` only for lower-priority items worth seeing today
+   - include `Needs Decision` from open decisions that should be surfaced today
+   - include `Waiting` for important waiting states only
+   - keep previous Journal days intact
+13. Update `last_updated` in any changed routed docs.
+14. Post the morning brief in the thread.
+
+## Rules
+- Do not recreate `Committed`, `Potential Tasks`, or `Open Loops` sections in `Notes and Journal`; those belong in `ACTION_LEDGER` and `DECISION_QUEUE`.
+- Do not copy yesterday's `Today` forward verbatim; render a fresh daily view from canonical state.
+- Do not default to a fixed number of tasks; size the day based on likely effort, available time, urgency, and context switching.
+- Do not put an item into `Focus` without a reason: time-sensitive, blocking, externally waiting, low-effort/high-risk, or strategically important today.
+- Do not let decisions disappear if {{USER_NAME}} did not answer; keep them in `DECISION_QUEUE` with a reprompt policy.
+- Do not mark work done without explicit evidence from checked items, user message, source system, or file state.
+- Do not log {{COS_NAME}}'s internal work in `**Progress:**`; progress is {{USER_NAME}}'s completed action.
+- Do not write long progress bullets; keep them short and action-shaped.
+- Do not rewrite {{USER_NAME}}'s freeform Journal notes.
+- Do not solve larger-picture visibility by recreating the full ledger in the daily note; show only a small selected overview and leave canonical state in operations files.
+- Do use `[[vault/Backlog.md]]` for backlog visibility instead of stuffing backlog into `Notes and Journal`.
+- Do not create a separate project-planning layer inside LifeOps; projects are only domain context unless {{USER_NAME}} explicitly adopts a project-management tool.
+- Do not satisfy the morning brief with only a todo list.
+- Do not read broad historical inbox windows when a valid lower bound exists.
+- Do not treat the workflow checklist as exhaustive; restore coherent system state when evidence clearly shows drift.
+- Do not treat Chronicle or Codex-session candidates as ground truth; use them as routing and attention hints until verified.
+- Do not treat Operator logs as {{USER_NAME}}'s personal progress; they are execution outcomes to reconcile and brief when useful.
+
+## Exception Rule
+If `ACTION_LEDGER` or `DECISION_QUEUE` is missing or malformed, repair the minimal structure needed to continue, then log the repair in `LOG.md`.
+
+## Output Contract
+- Update `[[vault/Operations/ACTION_LEDGER.md]]` and `[[vault/Operations/DECISION_QUEUE.md]]` as canonical state.
+- Refresh `[[vault/Backlog.md]]` as the human-readable backlog view.
+- Render only a lightweight daily view into `[[vault/Notes and Journal.md]]`.
+- Post a concise morning brief with:
+  - `Situation`
+  - `Changed Since Yesterday`
+  - `Recommended Focus`
+  - `Not Today Unless There Is Room`
+  - `Open Questions`

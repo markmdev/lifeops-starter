@@ -1,0 +1,98 @@
+---
+name: "apple-reminders"
+description: "Create, verify, update, or delete personal reminders in Apple Reminders/iCloud from macOS using osascript. Use when the user explicitly asks for an Apple account, Apple Reminders, iCloud reminder, or macOS Reminders item instead of a Codex automation."
+---
+
+# Apple Reminders
+
+Use this skill for personal reminders that should live in Apple's Reminders app.
+This is separate from Codex automations: use Codex automations when the user wants
+this thread to wake up, monitor something, or run agent work later.
+
+## Rules
+
+- Use `osascript` against the macOS Reminders app.
+- Treat dates as local machine time unless the user gives another timezone.
+- For relative dates, resolve them to an exact calendar date before creating the reminder.
+- Prefer a one-time Apple reminder for a one-time personal nudge when the user explicitly asks for Apple/iCloud.
+- Do not create duplicate reminders. Search by exact title and reminder date first.
+- After creating, updating, or deleting, read back the reminder state and report the exact title/date.
+- If Reminders automation permission is blocked, tell {{USER_NAME}} the specific permission blocker and do not fall back to Codex automation unless he asks.
+
+## Create A Reminder
+
+Use this pattern. Construct the date by fields instead of a natural-language
+`date "..."` string; it is less locale-sensitive.
+
+```bash
+osascript <<'APPLESCRIPT'
+set reminderDate to current date
+set day of reminderDate to 1
+set year of reminderDate to 2026
+set month of reminderDate to June
+set day of reminderDate to 14
+set time of reminderDate to 9 * hours
+
+tell application "Reminders"
+    set targetList to default list
+    set existingMatches to reminders of targetList whose name is "Review upcoming deadline"
+    repeat with r in existingMatches
+        if remind me date of r is reminderDate then
+            return "exists | " & (name of r as text) & " | " & (remind me date of r as text) & " | " & (id of r as text)
+        end if
+    end repeat
+
+    set newReminder to make new reminder at end of reminders of targetList with properties {name:"Review upcoming deadline", body:"Reminder created by LifeOps after {{USER_NAME}} requested a native Apple reminder.", remind me date:reminderDate, due date:reminderDate}
+    return "created | " & (name of newReminder as text) & " | " & (remind me date of newReminder as text) & " | " & (id of newReminder as text)
+end tell
+APPLESCRIPT
+```
+
+Notes:
+
+- `time` is seconds after midnight. Use `9 * hours`, `13 * hours + 30 * minutes`, etc.
+- Include `body` only when extra context will help {{USER_NAME}} act.
+- Use `default list` unless the user names a specific Reminders list.
+
+## Verify A Reminder
+
+Read back by exact title, then check the date.
+
+```bash
+osascript <<'APPLESCRIPT'
+tell application "Reminders"
+    set matches to reminders whose name is "Review upcoming deadline"
+    repeat with r in matches
+        if remind me date of r is not missing value then
+            return (name of r as text) & " | " & (remind me date of r as text) & " | " & (id of r as text)
+        end if
+    end repeat
+    return "not found"
+end tell
+APPLESCRIPT
+```
+
+## Delete A Reminder
+
+Be exact. Match title plus date or id when possible.
+
+```bash
+osascript <<'APPLESCRIPT'
+tell application "Reminders"
+    set targetId to "REMINDER_ID_HERE"
+    set matches to reminders whose id is targetId
+    if (count of matches) is 0 then return "not found"
+    delete item 1 of matches
+    return "deleted | " & targetId
+end tell
+APPLESCRIPT
+```
+
+## Output Contract
+
+Report:
+
+- whether the reminder was created, already existed, updated, deleted, or blocked
+- exact reminder title
+- exact local reminder date/time
+- reminder id/link when available

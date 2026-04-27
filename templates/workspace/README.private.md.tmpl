@@ -1,0 +1,45 @@
+# {{USER_NAME}}'s LifeOps
+
+Installed: {{INSTALL_DATETIME_LOCAL}}
+
+- Workspace: `{{WORKSPACE_PATH}}`
+- Vault: `{{VAULT_PATH}}`
+- Chief of Staff: {{COS_NAME}}
+- Operator: {{OPERATOR_NAME}}
+- Scheduler mode: {{SCHEDULER_MODE}}
+
+## How This Works
+
+This workspace is your private operating layer for Codex and Obsidian.
+
+- `vault/Notes and Journal.md` is your normal interface. Write notes, todos, ideas, and vague reminders there.
+- `vault/Backlog.md` is the readable view of unresolved work.
+- `vault/Operations/` is machine-owned state for the Chief of Staff, scheduler, decisions, action ledger, Operator, and source harvesters.
+- `vault/Knowledge/` stores source-linked knowledge. Saved sources are treated as claim-bearing artifacts, not beliefs.
+- `.lifeops/setup-report.md` records install status, integration status, and remaining setup choices.
+
+The Chief of Staff heartbeat wakes on the configured schedule, checks what is due in `vault/Operations/SCHEDULE.md`, reconciles the ledgers, and notifies only when useful. Optional worker threads can add autonomous execution and ambient context harvesting.
+
+## How To Use It
+
+Write naturally in `vault/Notes and Journal.md`. You do not need to maintain the operations files manually.
+
+Useful commands in the Chief of Staff thread:
+
+- `MORNING BRIEF`
+- `RUN SCHEDULER`
+- `EOD REVIEW`
+- `SYSTEM MAINTENANCE`
+
+Optional systems are described in:
+
+- `vault/Operations/worker-prompts/operator.md`
+- `vault/Operations/worker-prompts/codex-session-harvester.md`
+- `vault/Operations/worker-prompts/chronicle-harvester.md`
+
+## First Command
+
+```bash
+cd "{{WORKSPACE_PATH}}"
+codex
+```

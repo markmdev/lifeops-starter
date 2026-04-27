@@ -1,0 +1,197 @@
+# LLM Wiki Operations Reference
+
+Load this reference only when operating an LLM wiki.
+
+## Contents
+
+- Layouts
+- Schema Template
+- Index Template
+- Log Template
+- Ingest Detail
+- Query Detail
+- Lint Detail
+- Archiving
+- Obsidian Notes
+
+## Layouts
+
+Single-domain wiki:
+
+```text
+wiki/
+├── SCHEMA.md
+├── index.md
+├── log.md
+├── raw/
+│   ├── sources/
+│   ├── articles/
+│   ├── papers/
+│   ├── transcripts/
+│   └── assets/
+├── source-cards/
+├── entities/
+├── concepts/
+├── comparisons/
+└── queries/
+```
+
+Multi-domain wiki:
+
+```text
+wiki/
+├── SCHEMA.md
+├── index.md
+├── log.md
+├── _meta/
+│   └── domains.md
+└── domains/
+    └── <domain>/
+        ├── SCHEMA.md
+        ├── index.md
+        ├── log.md
+        ├── raw/
+        │   ├── sources/
+        │   └── assets/
+        ├── source-cards/
+        ├── entities/
+        ├── concepts/
+        ├── comparisons/
+        └── queries/
+```
+
+Use multi-domain structure when a topic has a different source universe, taxonomy, evaluation framework, or likely 10+ pages.
+
+## Schema Template
+
+````markdown
+# Wiki Schema
+
+## Domain
+<what this wiki covers>
+
+## Conventions
+- File names use lowercase hyphen-case.
+- Every wiki page starts with YAML frontmatter.
+- Use [[wikilinks]] between pages.
+- Update `updated` when materially changing a page.
+- Add every active page to `index.md`.
+- Append every material action to `log.md`.
+
+## Frontmatter
+```yaml
+---
+title: Page Title
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+type: entity | concept | comparison | query | summary
+tags: [schema-owned-tags]
+sources: [raw/sources/source-name.md]
+---
+```
+
+## Tag Taxonomy
+<define 10-20 domain tags before using them>
+
+## Page Thresholds
+- Create a page when an entity or concept appears in 2+ sources or is central to one source.
+- Add to an existing page when a source mentions something already covered.
+- Do not create pages for passing mentions.
+- Split pages that become hard to scan.
+- Archive fully superseded pages.
+````
+
+## Index Template
+
+```markdown
+# Wiki Index
+
+> Content catalog. Every wiki page listed under its type with a one-line summary.
+> Last updated: YYYY-MM-DD | Total pages: N
+
+## Entities
+
+## Concepts
+
+## Comparisons
+
+## Queries
+```
+
+When any section exceeds 50 entries, split it into sub-sections. When the whole index exceeds 200 entries, create a topic map.
+
+## Log Template
+
+```markdown
+# Wiki Log
+
+> Chronological record of wiki actions.
+> Format: `## [YYYY-MM-DD] action | subject`
+> Actions: ingest, update, query, lint, create, archive, delete, migrate
+
+## [YYYY-MM-DD] create | Wiki initialized
+- Domain: <domain>
+- Structure created with SCHEMA.md, index.md, log.md
+```
+
+Rotate `log.md` when it exceeds 500 entries.
+
+## Ingest Detail
+
+1. Capture raw source first:
+   - URL, article, X post, Gist, repo note, or structured API output: save markdown or JSON under `raw/sources/`.
+   - PDF or paper: save under `raw/papers/`.
+   - pasted text: save under the closest raw subfolder.
+   - images/assets: save under `raw/assets/<source-slug>/`.
+   - if full raw capture is inappropriate, save limited excerpts or retrieval metadata and explain the skip reason in the source card.
+2. Create a compact source card under `source-cards/` when the source is worth preserving. It should point to the raw snapshot, canonical URL, retrieval method, neutral claim inventory, cautions, and related compiled pages.
+3. Search existing pages and indexes for mentioned entities, concepts, and questions.
+4. Create or update compiled pages that meet the schema threshold. Do not grow source cards into long article summaries.
+5. Preserve contradiction instead of overwriting it: note both claims with dates and sources, and flag for review.
+6. Keep synthesis preference-neutral unless the user explicitly stated a preference. Do not infer that the user wants or rejects a tactic because it is controversial, hypey, aggressive, or high-risk. Split the source into observed mechanics, risk gates, usable-with-constraints cases, and decisions requiring user review.
+7. Use `do_not_apply` or "rejected" language only for non-negotiable blockers such as illegality, rights violations, privacy violations, unavoidable deception, or obvious platform/account evasion. Otherwise prefer constrained-candidate language.
+8. Add useful outbound wikilinks from new pages when possible.
+9. Update `index.md` once after the page set is stable.
+10. Append a `log.md` entry listing files changed.
+
+For bulk ingest, read all sources first, identify all entities/concepts in one pass, then update pages and index once.
+
+## Query Detail
+
+1. Read `index.md` to identify candidate pages.
+2. Search all `.md` files when the wiki is large or terms may not appear in the index.
+3. Read relevant compiled pages first, then raw snapshots or original sources when exact claims, evidence, wording, or currentness matter.
+4. Synthesize the answer from compiled knowledge and verified source evidence.
+5. Cite wiki pages using `[[wikilinks]]`.
+6. File only reusable synthesis into `queries/`, `comparisons/`, or another compiled page. Source cards remain provenance/index records.
+7. Append a query log entry.
+
+## Lint Detail
+
+Report findings by severity:
+- broken wikilinks
+- orphan pages
+- pages missing from `index.md`
+- invalid or incomplete frontmatter
+- tags not present in `SCHEMA.md`
+- contradictory claims needing review
+- stale pages
+- oversized pages
+- log rotation needed
+
+Use scripts or shell searches for large wikis instead of hand-inspecting every file.
+
+## Archiving
+
+1. Create `_archive/` if needed.
+2. Move the superseded page while preserving a recognizable path.
+3. Remove it from `index.md`.
+4. Update inbound links to point at the replacement or plain archived note.
+5. Log the archive.
+
+## Obsidian Notes
+
+The wiki should work as an Obsidian vault:
+- `[[wikilinks]]` render as links.
+- `raw/assets/` can store attachments.
+- YAML frontmatter supports Dataview-style workflows when the user uses Obsidian.

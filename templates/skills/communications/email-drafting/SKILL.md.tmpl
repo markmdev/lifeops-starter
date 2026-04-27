@@ -1,0 +1,78 @@
+---
+name: email-drafting
+description: Draft proactive email replies from Gmail thread context when inbox-attention or {{USER_NAME}} identifies a reply-worthy thread, create native Gmail drafts, stage active draft entries using the queue schema, and improve over time from {{USER_NAME}}'s edits and sent outcomes.
+---
+
+# Email Drafting
+
+## Core Instruction
+Write reply drafts that move the thread forward in {{USER_NAME}}'s real voice, create a native Gmail draft whenever possible, stage the result for review using the queue schema, and learn only from repeated or durable corrections.
+
+## Required Inputs
+- The target Gmail thread or enough context to identify it
+- [[vault/Operations/EMAIL_DRAFT_QUEUE.md]]
+- [[vault/Operations/EMAIL_LOG.md]]
+- [[vault/Profile/Profile.md]]
+
+## Default Workflow
+1. Read the latest relevant email in the thread and determine whether a reply is actually needed now.
+2. Classify the thread as one of:
+   - `reply-now`
+   - `waiting`
+   - `no-reply`
+3. If it is not `reply-now`, do not force a draft. Log only if that decision is operationally useful.
+4. For `reply-now`, identify the exact goal of the reply:
+   - answer a question
+   - unblock a process
+   - confirm or decline
+   - ask for missing information
+   - move the thread to the next step
+5. Write the draft in {{USER_NAME}}'s voice:
+   - direct
+   - concise
+   - practical
+   - no assistant-like filler
+6. Run a self-check before staging:
+   - Does it answer the actual ask?
+   - Is it too long for the thread?
+   - Is the next step explicit?
+   - Does it sound like {{USER_NAME}} rather than a generic helper?
+7. When recipient and reply metadata are available and the Gmail draft tool is available, create a native Gmail draft first so the reply is ready inside Gmail.
+8. For threaded Gmail reply drafts, immediately update the draft body once with the intended clean reply text. This strips any visible quoted-message trail that Gmail or the connector may append below the draft.
+9. Verify mailbox state before claiming a newly created item is awaiting review; if the message already appears in Sent during this drafting run, treat it as approval-by-action and log the outcome instead of leaving an active queue entry.
+10. Stage the item in [[vault/Operations/EMAIL_DRAFT_QUEUE.md]] with factual metadata, the Gmail draft id if one exists, confidence, and the proposed reply.
+11. Append a short factual line to [[vault/Operations/EMAIL_LOG.md]].
+12. If the thread is time-sensitive or especially important, notify {{USER_NAME}} that a draft is ready with the direct Gmail link.
+13. When {{USER_NAME}} edits, approves, rejects, or sends a draft, record the outcome and capture only durable lessons.
+
+## Rules
+- Do not send email autonomously.
+- Do not stage drafts for newsletters, promos, automated notices, receipts, OTP codes, or automated app/testing noise unless {{USER_NAME}} explicitly wants that thread handled.
+- Do not draft vague “just checking in” replies unless the thread genuinely benefits from it.
+- Do not preserve assistant phrasing such as “I hope you’re doing well” unless the thread tone clearly calls for it.
+- Do not add polite offer lines such as “let me know if there is anything specific…” unless {{USER_NAME}} explicitly wants that move in the thread.
+- Do not put internal operational notes into the email body, such as bounced recipients, tool limitations, or queue state, unless the recipient actually needs that information.
+- Do not create a new queue entry if an active entry already exists for the same Gmail thread; update the existing entry instead.
+- Do not keep `sent`, `dismissed`, or `stale` items in the active `Live Drafts` queue; those outcomes belong in [[vault/Operations/EMAIL_LOG.md]].
+- Do not codify one-off wording preferences as durable rules.
+- Do not learn from edits unless the final wording or structural correction is observable.
+- Do not skip native Gmail draft creation when the draft tool is available and the thread metadata is complete enough to keep the reply threaded correctly.
+- Do not create a native Gmail draft if the thread metadata is too incomplete to keep the reply threaded correctly.
+- Do not leave visible quoted history in the new reply body unless {{USER_NAME}} explicitly asks for it. If the connector appends a quote, clean it with `update_draft` before staging or notifying.
+- Do not tell {{USER_NAME}} a draft is awaiting review without verifying that the message did not already move to Sent.
+- Do not own recurring mailbox-state reconciliation; that belongs to [$inbox-attention]({{WORKSPACE_PATH}}/.agents/skills/tasks/inbox-attention/SKILL.md), because it runs on the inbox cadence.
+
+## Compounding Rules
+- If {{USER_NAME}} accepts a draft as-is or with only light edits, log the outcome but do not update the skill.
+- If a staged draft later appears in Sent without additional user instruction in chat, treat that as valid approval-by-action.
+- If {{USER_NAME}} makes the same style or structure correction multiple times, update a reference file or the skill.
+- If a correction is sender-specific, store it as sender guidance rather than a universal rule.
+- If a correction changes when drafts should be proposed at all, update the skill itself.
+
+## Exception Rule
+If the thread context is incomplete or ambiguous but the reply is clearly urgent, stage a short holding reply only if it safely buys time without inventing facts.
+
+## Output Contract
+- When staging a draft, update `[[vault/Operations/EMAIL_DRAFT_QUEUE.md]]` with one complete queue entry, including the Gmail draft id when a native draft exists.
+- Append one factual line to `[[vault/Operations/EMAIL_LOG.md]]`.
+- Notify only when a review-worthy draft is ready or the thread clearly needs {{USER_NAME}}'s attention.

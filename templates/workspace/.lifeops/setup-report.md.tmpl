@@ -1,0 +1,44 @@
+# LifeOps Setup Report
+
+Installed: {{INSTALL_DATETIME_LOCAL}}
+
+- Workspace: `{{WORKSPACE_PATH}}`
+- Vault: `{{VAULT_PATH}}`
+- Scheduler mode: {{SCHEDULER_MODE}}
+- Operator status: {{OPERATOR_STATUS}}
+- Backup status: {{BACKUP_STATUS}}
+
+## Integration Status
+
+| Integration | Status |
+| --- | --- |
+| Gmail | {{GMAIL_STATUS}} |
+| Calendar | {{CALENDAR_STATUS}} |
+| Contacts | {{CONTACTS_STATUS}} |
+| Messages | {{MESSAGES_STATUS}} |
+| Codex sessions | {{CODEX_SESSIONS_STATUS}} |
+| Chronicle | {{CHRONICLE_STATUS}} |
+| GitHub | {{GITHUB_STATUS}} |
+| Drive | {{DRIVE_STATUS}} |
+| Reminders | {{REMINDERS_STATUS}} |
+| Browser | {{BROWSER_STATUS}} |
+| Slack | {{SLACK_STATUS}} |
+
+## Heartbeat Completion Gate
+
+A LifeOps install is fully live only when the CoS scheduler heartbeat exists and has been verified in Codex Desktop.
+
+- CoS scheduler automation: pending until setup creates/verifies `lifeops-scheduler`
+- Operator automation: optional; pending until setup records the Operator thread id and creates/verifies `lifeops-operator`
+- Codex Session Harvester automation: optional; pending until setup verifies Codex session files, records the worker thread id, and creates/verifies `lifeops-codex-session-harvester`
+- Chronicle Harvester automation: optional; pending until setup verifies Chronicle access, records the worker thread id, and creates/verifies `lifeops-chronicle-harvester`
+
+If the setup agent could not create Codex Desktop automations, treat the workspace as installed but not fully live. Keep the remaining setup step visible in [[vault/Operations/ACTION_LEDGER.md]] and run `RUN SCHEDULER` manually in the CoS thread until automation is configured.
+
+## Onboarding Decisions
+
+- Operator: {{OPERATOR_STATUS}}
+- Codex Session Harvester: pending user onboarding decision
+- Chronicle Harvester: pending user onboarding decision
+- Private GitHub backup: {{BACKUP_STATUS}}
+- Starter repo star: pending user onboarding decision

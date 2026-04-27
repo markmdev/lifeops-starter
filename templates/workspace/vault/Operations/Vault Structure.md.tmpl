@@ -1,0 +1,78 @@
+---
+summary: Vault structure and link policy for Obsidian-facing notes and agent-facing routing
+last_updated: "2026-04-26 15:55 PDT"
+read_when:
+  - vault structure
+  - obsidian links
+  - wikilinks
+  - domain organization
+  - docs routing
+---
+
+# Vault Structure
+
+The Obsidian vault root is `vault/`.
+
+## Link Policy
+
+Inside files under `vault/`, use Obsidian wikilinks for other vault files:
+
+- Good: [[Operations/ACTION_LEDGER.md]]
+- Good: [[Knowledge/Knowledge.md]]
+- Bad: leading `vault/` prefix
+- Bad: absolute `{{WORKSPACE_PATH}}/...` path
+- Bad: wrapping a wikilink in backticks
+
+Rules:
+
+- Use vault-root-relative paths, without the leading `vault/`.
+- Do not wrap wikilinks in backticks.
+- Keep aliases only when they help {{USER_NAME}} read the sentence.
+- Use normal URLs for Gmail, Drive, GitHub, portals, and web sources.
+- Use plain code paths for files outside the Obsidian vault, such as `DOCS_INDEX.md`, scripts, local repos, and skills.
+- In chat with {{USER_NAME}}, use normal clickable markdown links with absolute filesystem paths when referencing files.
+
+Run the validator after link-heavy edits:
+
+```bash
+python3 scripts/lint-vault-links.py
+```
+
+Use `--fix` only for mechanical cleanup of known-safe prefix/code-span issues.
+
+## Domain Shape
+
+Each durable domain should have one short domain index:
+
+- `Career/Career.md`
+- `Finance/Finance.md`
+- `Health/Health.md`
+- `Housing/Housing.md`
+- `Immigration/Immigration.md`
+- `Knowledge/Knowledge.md`
+- `People/People.md`
+- `Projects/<project>.md` when a project needs durable context; any build/project lasting more than one focused session should get this lightweight context page
+
+Supporting details belong under `docs/` when they are stable enough to reference.
+
+Raw source archives, prompt archives, and generated evidence packets can stay in their current folders, but future agents should not treat them as the first reading surface unless the domain index points there.
+
+## Source Of Truth
+
+The vault is a compiled map, not the source of truth.
+
+Authoritative systems remain:
+
+- Gmail, Messages, Calendar, Drive, GitHub, account portals, and local repos for internal facts
+- original URLs or captured source cards for external artifacts
+- Chronicle only as ambient evidence that may need verification
+
+## Cross-Thread Behavior
+
+For any Codex thread started in `{{WORKSPACE_PATH}}`:
+
+- `AGENTS.md` and `DOCS_INDEX.md` should point the agent to the vault routing layer.
+- If {{USER_NAME}} says `save this: <url>`, the thread should use the `llm-wiki` skill and the knowledge layer.
+- If {{USER_NAME}} says `use the knowledge base to answer: <question>`, the thread should read the relevant domain notes and compiled knowledge pages first.
+
+Threads outside `{{WORKSPACE_PATH}}` do not get this automatically. Their prompts should explicitly include the relevant vault links or a short context packet.

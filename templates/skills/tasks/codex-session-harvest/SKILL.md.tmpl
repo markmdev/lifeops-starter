@@ -1,0 +1,140 @@
+---
+name: codex-session-harvest
+description: Run the Codex session harvesting source adapter for {{USER_NAME}}'s Chief of Staff system. Use when a durable Codex Session Harvester worker or CoS asks to review recent local Codex session transcripts, detect useful project/task/context signals, and append conservative machine-readable candidates without promoting them directly into tasks or notes.
+---
+
+# Codex Session Harvest
+
+## Core Instruction
+Treat local Codex session transcripts as a high-signal but partial evidence stream: detect useful changes across {{USER_NAME}}'s Codex work, preserve transcript evidence and confidence, write candidate signals to the harvester outbox, and leave promotion to the Chief of Staff.
+
+## Required Inputs
+- Session index: `$HOME/.codex/session_index.jsonl`
+- Session transcripts: `$HOME/.codex/sessions/**/rollout-*.jsonl`
+- Transcript forensics skill: `[$codex-transcript-forensics]({{WORKSPACE_PATH}}/.agents/skills/codex-transcript-forensics/SKILL.md)`
+- Machine state: `{{WORKSPACE_PATH}}/vault/Operations/.machine/codex-session-harvest/state.json`
+- Candidate outbox: `{{WORKSPACE_PATH}}/vault/Operations/.machine/codex-session-harvest/outbox.jsonl`
+- Current CoS state: `{{WORKSPACE_PATH}}/vault/Operations/ACTION_LEDGER.md` and `{{WORKSPACE_PATH}}/vault/Operations/DECISION_QUEUE.md`
+- Recent Chronicle candidates: `{{WORKSPACE_PATH}}/vault/Operations/.machine/chronicle-harvest/outbox.jsonl`
+- CoS doctrine: `[[vault/Operations/Chief of Staff System.md]]`
+- Signal lifecycle rules: `{{WORKSPACE_PATH}}/vault/Operations/SIGNAL_INBOX.md`
+- Outbox validator: `{{WORKSPACE_PATH}}/.agents/skills/tasks/codex-session-harvest/scripts/validate_outbox.py`
+
+## Default Workflow
+1. Read this skill, the transcript forensics skill, `state.json`, recent `outbox.jsonl` lines, current CoS ledger/decision state, and recent Chronicle candidates.
+   - If no prior successful run exists, treat this as the first conservative baseline. Emit at most 5 high-signal candidates, update checkpoints, report what was suppressed, and stop.
+2. Use `$HOME/.codex/session_index.jsonl` to find sessions changed since the last successful run.
+3. Prefer incremental scanning:
+   - for known sessions, read only transcript lines after the stored offset when possible
+   - for new sessions, inspect enough metadata and recent turns to understand the thread boundary
+   - if no checkpoint exists, create a baseline from the last 24 hours of updated sessions, then widen only when CoS asks for backfill
+4. Read high-signal transcript fields first:
+   - user messages
+   - assistant final messages and summaries
+   - tool call inputs
+   - session metadata such as `cwd`, title, and thread id
+5. Avoid broad tool-output ingestion. Use tool outputs only when they are small and necessary to verify a concrete completion, blocker, artifact path, or external status.
+6. Classify each candidate as one of:
+   - `active_work`
+   - `completed_work`
+   - `durable_fact`
+   - `possible_action`
+   - `possible_decision`
+   - `project_status`
+   - `system_learning`
+   - `needs_verification`
+   - `noise`
+7. For each candidate, assign:
+   - `confidence`: `high`, `medium`, or `low`
+   - `proposed_destination`: `ignore`, `cos_review`, `action_ledger`, `decision_queue`, `domain_note`, `project_note`, `knowledge`, `skill_update`, or `source_verification`
+   - evidence pointers: transcript path, thread id, line number range if available, session title, and workspace/cwd
+8. Append only new, non-duplicate candidate JSON objects to `outbox.jsonl`.
+   New candidates start with `status: "new"`. CoS later owns review and may
+   change status to `promoted`, `dismissed`, `superseded`,
+   `needs_verification`, or `ignored_noise`.
+   - Do not append items that merely confirm an existing ledger item, resolved decision, or recent Chronicle candidate unless the transcript adds a new concrete blocker, contradiction, deadline, artifact path, or source to verify.
+   - If `ACTION_LEDGER` or the live automation registry already shows a workflow configured and current, suppress the candidate unless the transcript adds a new blocker, contradiction, deadline, artifact path, or source to verify.
+   - For a busy project with many related sessions, group the work train into one candidate instead of emitting one candidate per PR, review, or helper thread.
+   - For the first baseline, prefer fewer high-signal candidates; record lower-signal reviewed sessions in `state.json` rather than outbox.
+9. Validate candidate JSONL against the exact Candidate JSON Shape before reporting success:
+   `python3 {{WORKSPACE_PATH}}/.agents/skills/tasks/codex-session-harvest/scripts/validate_outbox.py`
+   Fix schema errors before finishing the run.
+10. Update `state.json` with run timestamps, reviewed sessions, offsets/checkpoints, counts, and any blocker.
+11. Report to CoS only when there are high-signal new candidates, a blocker, or a repeated failure mode. Otherwise stay quiet.
+
+## Worker Lifecycle
+- In the public starter, the worker heartbeat may be attached immediately after setup records the thread id. Do not ask CoS to wire a heartbeat.
+- The first run is a conservative baseline, not broad backfill. Prefer false negatives over noisy candidates.
+- If a run is noisy or the prompt changes materially, CoS may delete or pause the worker heartbeat, record the old thread id in `previous_thread_ids`, wipe polluted candidate output, reset checkpoints, update this skill/prompt, and start a fresh worker thread.
+- Do not continue a polluted worker after a material prompt correction. A worker's own context can bias future runs even if the file-backed output is cleaned.
+- Schema compliance is mandatory. A candidate with good content but wrong field names or data types must be fixed before reporting success.
+
+## Candidate JSON Shape
+Each `outbox.jsonl` line must be a single JSON object:
+
+```json
+{
+  "id": "cs_YYYYMMDDHHMM_short_slug",
+  "created_at": "iso-8601-with-offset",
+  "observed_window_start_utc": "iso-8601Z",
+  "observed_window_end_utc": "iso-8601Z",
+  "thread_id": "codex thread id",
+  "session_title": "short title if known",
+  "cwd": "/absolute/workspace/path or null",
+  "category": "active_work|completed_work|durable_fact|possible_action|possible_decision|project_status|system_learning|needs_verification|noise",
+  "confidence": "high|medium|low",
+  "summary": "short factual candidate",
+  "evidence": ["transcript path:line or session_index pointer"],
+  "proposed_destination": "ignore|cos_review|action_ledger|decision_queue|domain_note|project_note|knowledge|skill_update|source_verification",
+  "verification_needed": true,
+  "status": "new",
+  "notes": "short reason this matters or why it was rejected"
+}
+```
+
+Do not add alternate top-level fields to candidate lines unless this schema is intentionally revised first. In particular:
+
+- use `confidence`: `high`, `medium`, or `low`; do not use numeric confidence
+- use `verification_needed`; do not use `needs_verification`
+- use flat evidence strings; do not use nested evidence objects
+- include `status`: `new`
+
+After CoS reviews a candidate, the same line may gain lifecycle review fields:
+`reviewed_at`, `reviewed_by`, `decision`, `destination`, `reason`, and
+`superseded_by`. Harvester runs should preserve those fields and avoid
+near-duplicate candidates unless there is materially new evidence.
+
+## Signal Guidance
+- Capture `active_work` when a separate Codex thread is clearly working on a project {{USER_NAME}} cares about and CoS may need awareness.
+- Capture `completed_work` only when transcript evidence is strong, such as explicit user confirmation, assistant final with artifact paths, or a successful tool/action summary. {{USER_NAME}}ing ledger progress still belongs to CoS.
+- Capture `durable_fact` when {{USER_NAME}} states a reusable fact, preference, account/project detail, deadline, relationship context, or personal operating rule.
+- Capture `possible_action` or `possible_decision` when a thread produces a follow-up that could be lost outside the CoS thread.
+- Capture `project_status` for material project movement, blockers, PRs, deployments, validation status, or handoff readiness.
+- Capture `system_learning` for repeated agent failures, useful prompts, skill gaps, or operating-system improvements.
+- Use `needs_verification` when the transcript suggests an external outcome that should be checked against Gmail, GitHub, Drive, account UI, repo state, or another authoritative source.
+
+## Rules
+- Do not treat a Codex transcript as the final source of truth for purchases, submissions, sent messages, account changes, legal/medical/financial facts, or production deployment status.
+- Do not write directly to `ACTION_LEDGER`, `DECISION_QUEUE`, `Notes and Journal`, or domain/project notes from this skill.
+- Do not ingest hidden reasoning or encrypted blobs.
+- Do not summarize every session. Harvest only reusable context, state changes, decisions, blockers, and follow-ups.
+- Do not duplicate existing unresolved or reviewed outbox candidates unless there is materially new evidence, a contradiction, or a changed blocker.
+- Do not resurrect topics {{USER_NAME}} has explicitly dismissed or asked to put aside unless there is materially new evidence or current operational need.
+- Do not create multiple same-project candidates when a single grouped project-status candidate would give CoS the same useful awareness with less noise.
+- Do not copy secrets, credentials, private keys, or sensitive raw payloads into the outbox. If exposure is suspected, record a redacted `needs_verification` signal and recommend source-level rotation or cleanup.
+- Do not let one huge transcript block the whole run. Record a blocker, checkpoint what was reviewed, and continue with other changed sessions.
+- Do not notify {{USER_NAME}} directly unless the harvester itself is blocked or a high-risk time-sensitive signal appears and CoS is unavailable.
+
+## Exception Rule
+If session index or transcript files are missing, malformed, or too large to review safely, update `state.json` with `last_error`, append no speculative candidates, and report the blocker to CoS only if it prevents scheduled harvesting for more than one run.
+
+## Output Contract
+- Update `state.json` on every attempted run.
+- Append candidate JSON lines to `outbox.jsonl` only for new candidates.
+- In the harvester thread, summarize only:
+  - reviewed window
+  - sessions reviewed
+  - candidate counts by category
+  - high-signal items for CoS
+  - blockers or repeated flaws
+- Stay silent when no useful candidate or blocker exists.

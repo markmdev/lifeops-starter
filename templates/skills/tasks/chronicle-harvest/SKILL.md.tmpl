@@ -1,0 +1,96 @@
+---
+name: chronicle-harvest
+description: Run the ambient Chronicle harvesting source adapter for {{USER_NAME}}'s Chief of Staff system. Use when a durable Chronicle Harvester thread or CoS asks to review recent screen-history summaries/OCR, detect useful candidate context, and append conservative machine-readable candidate signals without promoting them directly into tasks or notes.
+---
+
+# Chronicle Harvest
+
+## Core Instruction
+Treat Chronicle as a high-coverage but fallible evidence stream: detect useful changes, preserve evidence and confidence, write candidate signals to the harvester outbox, and leave promotion to the Chief of Staff.
+
+## Required Inputs
+- Chronicle skill and its preconditions
+- Chronicle summaries under `$HOME/.codex/memories_extensions/chronicle/resources/`
+- Chronicle OCR/frame data under `$TMPDIR/chronicle/screen_recording/` only when summaries need targeted confirmation
+- Machine state at `{{WORKSPACE_PATH}}/vault/Operations/.machine/chronicle-harvest/state.json`
+- Candidate outbox at `{{WORKSPACE_PATH}}/vault/Operations/.machine/chronicle-harvest/outbox.jsonl`
+- CoS doctrine at `[[vault/Operations/Chief of Staff System.md]]`
+- Signal lifecycle rules at `{{WORKSPACE_PATH}}/vault/Operations/SIGNAL_INBOX.md`
+
+## Default Workflow
+1. Read this skill and the Chronicle skill before touching Chronicle data.
+2. Verify Chronicle is currently running and screen-history data is fresh enough to use.
+3. Read `state.json` to determine the last successful reviewed timestamp and last reported timestamp.
+4. Select the smallest useful window:
+   - default to new Chronicle summaries since `last_successful_run_at`
+   - if no prior run exists, review the most recent 3-6 hours
+   - if the gap is too large, summarize the broad gap and sample recent/high-signal periods instead of exhaustively reading everything
+5. Use summaries first. Use OCR grep and sampled frames only to confirm important or ambiguous observations.
+6. Classify each candidate as one of:
+   - `active_work`
+   - `idle_project_signal`
+   - `durable_fact`
+   - `possible_action`
+   - `possible_decision`
+   - `needs_verification`
+   - `noise`
+7. For each candidate, assign:
+   - `confidence`: `high`, `medium`, or `low`
+   - `proposed_destination`: `ignore`, `cos_review`, `action_ledger`, `decision_queue`, `domain_note`, `project_note`, or `source_verification`
+   - evidence pointers: Chronicle summary filenames, OCR timestamps, frame paths, or a note that evidence is summary-only
+8. Append only new, non-duplicate candidate JSON objects to `outbox.jsonl`.
+   New candidates start with `status: "new"`. CoS later owns review and may
+   change status to `promoted`, `dismissed`, `superseded`,
+   `needs_verification`, or `ignored_noise`.
+9. Update `state.json` with the run timestamps, reviewed window, counts, and any blocker.
+10. Report to CoS only when there are high-signal new candidates, a blocker, or a repeated failure mode. Otherwise stay quiet.
+
+## Candidate JSON Shape
+Each `outbox.jsonl` line must be a single JSON object:
+
+```json
+{
+  "id": "chr_YYYYMMDDHHMM_short_slug",
+  "created_at": "iso-8601-with-offset",
+  "observed_window_start_utc": "iso-8601Z",
+  "observed_window_end_utc": "iso-8601Z",
+  "category": "active_work|idle_project_signal|durable_fact|possible_action|possible_decision|needs_verification|noise",
+  "confidence": "high|medium|low",
+  "summary": "short factual candidate",
+  "evidence": ["summary filename, OCR timestamp, or frame path"],
+  "proposed_destination": "ignore|cos_review|action_ledger|decision_queue|domain_note|project_note|source_verification",
+  "verification_needed": true,
+  "status": "new",
+  "notes": "short reason this matters or why it was rejected"
+}
+```
+
+After CoS reviews a candidate, the same line may gain lifecycle review fields:
+`reviewed_at`, `reviewed_by`, `decision`, `destination`, `reason`, and
+`superseded_by`. Harvester runs should preserve those fields and avoid
+near-duplicate candidates unless there is materially new evidence.
+
+## Rules
+- Do not treat Chronicle as ground truth for completed actions, purchases, submissions, account changes, or sent messages; mark those `needs_verification` unless another authoritative source has already confirmed them.
+- Do not write directly to `ACTION_LEDGER`, `DECISION_QUEUE`, `Notes and Journal`, or domain/project notes from this skill.
+- Do not resurrect a candidate CoS already reviewed unless there is materially new evidence; read reviewed statuses and `superseded_by` before appending near-duplicates.
+- Do not create broad life summaries or diary entries.
+- Do not infer intent from visible content alone; describe what was visible and why it may matter.
+- Do not promote sidebar visibility, open tabs, or casual browsing into active work without corroborating evidence.
+- Do not include sensitive personal details unless they materially change an operational task, decision, or durable context item.
+- Do not duplicate an existing unresolved outbox candidate; update state counts instead.
+- Do not use OCR text as an authoritative source for IDs, links, or exact text when a connector, file, or app API can verify it.
+- Do not notify {{USER_NAME}} directly unless the Chronicle system itself is blocked or a high-risk time-sensitive signal appears and CoS is unavailable.
+
+## Exception Rule
+If Chronicle is unavailable, stale, or too noisy to review safely, update `state.json` with `last_error`, append no candidates, and report the blocker to CoS only if it prevents scheduled harvesting for more than one run.
+
+## Output Contract
+- Update `state.json` on every attempted run.
+- Append candidate JSON lines to `outbox.jsonl` only for new candidates.
+- In the harvester thread, summarize only:
+  - reviewed window
+  - candidate counts by category
+  - high-signal items for CoS
+  - blockers or repeated flaws
+- Stay silent when no useful candidate or blocker exists.

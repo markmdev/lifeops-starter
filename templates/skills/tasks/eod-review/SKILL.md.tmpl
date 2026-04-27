@@ -1,0 +1,76 @@
+---
+name: eod-review
+description: Run the end-of-day Chief of Staff pass by harvesting checked Today items into progress, reconciling the action ledger and decision queue, refreshing the human-readable backlog, keeping the daily note lightweight, and posting an end-of-day brief.
+---
+
+# End Of Day Review
+
+## Core Instruction
+Close the day by converting completed visible work into progress, reconciling canonical state in `ACTION_LEDGER` and `DECISION_QUEUE`, refreshing the human-readable backlog, and briefing {{USER_NAME}} on what happened, what remains, and what needs a decision.
+
+## Default Workflow
+1. Read:
+   - [[vault/Operations/ACTION_LEDGER.md]]
+   - [[vault/Operations/DECISION_QUEUE.md]]
+   - [[vault/Backlog.md]]
+   - [[vault/Notes and Journal.md]]
+   - [[vault/Operations/OPERATOR_LOG.md]]
+   - [[vault/Operations/OPERATOR_HANDOFF.md]]
+   - [[vault/Operations/LOG.md]]
+2. Determine the current local date and time from the `Timezone:` value in `[[vault/Operations/SCHEDULE.md]]`; if it is missing, fall back to `America/Los_Angeles`.
+3. Inspect today's `Today` section and today's Journal entry.
+4. Reconcile today's visible checklist against canonical evidence before harvesting:
+   - keep unchecked items open when the source of truth still shows prepared, waiting, or unresolved state
+   - mark unchecked items complete when `ACTION_LEDGER`, `LOG`, or another authoritative local source clearly proves the item was completed under a different shape
+   - do not infer completion from intent, partial prep, or Chronicle/Codex-session candidates alone
+5. Convert every checked `- [x]` item in today's `Today` section into today's `**Progress:**` block unless an equivalent entry already exists.
+   - use concise active-outcome wording
+   - remove scheduling qualifiers like "today" when they are not part of the outcome
+   - do not log unchecked items
+6. {{USER_NAME}} matching `ACTION_LEDGER` items `done` when the completed item maps clearly.
+7. Reconcile canonical state:
+   - remove completed work from active daily rendering by setting it `done`
+   - keep external waiting states as `waiting`
+   - keep unresolved questions in `DECISION_QUEUE`
+   - if a decision was answered in chat or visible note state, mark it resolved
+   - if a decision is stale or low-confidence, apply its reprompt policy instead of carrying it forever
+8. Review Operator log/handoff items from today:
+   - reconcile completed Operator work into canonical state when proof is clear
+   - include user-visible Operator completions in the EOD brief when they matter
+   - do not log Operator's internal work as {{USER_NAME}}'s `**Progress:**`
+9. Refresh `[[vault/Backlog.md]]` from reconciled canonical state so completed Today items do not remain visible as backlog.
+10. Preserve the human note:
+   - keep previous Journal days intact
+   - update only today's `**Progress:**`, `Snapshot`, and small daily view when needed
+   - do not recreate the old heavy operational lanes
+11. Refresh `last_updated` in changed routed docs.
+12. Post the EOD brief.
+
+## Rules
+- Do not fabricate progress from intent alone.
+- Do not ignore checked `Today` items; checked items are completion evidence unless contradicted by context.
+- Do not leave a daily checkbox open when stronger local evidence clearly proves the work was completed.
+- Do not copy unfinished `Today` items into a new dated section.
+- Do not leave completed work active in `ACTION_LEDGER`.
+- Do not let decisions vanish without being resolved, dismissed, or reprompted according to policy.
+- Do not put machine-state complexity back into `Notes and Journal`.
+- Do use `[[vault/Backlog.md]]` for backlog visibility instead of putting backlog into the daily note.
+- Do not create a separate project-planning layer inside LifeOps; projects are only domain context unless {{USER_NAME}} explicitly adopts a project-management tool.
+- Do not log {{COS_NAME}}'s internal work in `**Progress:**`; log only {{USER_NAME}}'s completed actions.
+- Do not include passive happenings as progress just because they appeared in a source log.
+- Do not rewrite {{USER_NAME}}'s freeform Journal notes.
+- Do not skip the end-of-day brief just because there are no blockers.
+- Do not invent open questions when none exist.
+- Do not treat Operator logs as {{USER_NAME}}'s personal progress; they are execution outcomes to reconcile and brief when useful.
+
+## Exception Rule
+If expected sections are missing, repair the minimum structure needed for the EOD pass and log the repair in `LOG.md`.
+
+## Output Contract
+- Update `[[vault/Operations/ACTION_LEDGER.md]]` and `[[vault/Operations/DECISION_QUEUE.md]]` when state changed.
+- Refresh `[[vault/Backlog.md]]` when backlog visibility changes.
+- Update `[[vault/Notes and Journal.md]]` only as the lightweight human surface.
+- Post a concise EOD brief with:
+  - what happened today
+  - what still needs attention
+  - open questions, if any
